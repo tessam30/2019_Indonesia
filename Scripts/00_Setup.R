@@ -1,0 +1,20 @@
+# Purpose: Set up repository for Indonesia Tableau Training
+# Author: Tim Essam, Ph.D | USAID GeoCenter
+# Date: 2019_03_19
+# Audience: USAID Indonesia Program Office 
+
+# Load libraries and data -------------------------------------------------
+pacman::p_load("tidyverse", "lubridate", "sf", "extrafont", "readxl", "measurements", "pdftools", "purrr", "styler", "scales", "llamar", "haven", "sjlabelled", "vtable", "sjmisc", "survey", "data.table", "lemon", "widyr", "RColorBrewer")
+
+# Create folders for project (if they do not exist)
+dirs <- list("Data", "Dataout", "Tableau", "Images", "Scripts", "Logos")
+map(dirs, ~dir.create(.))
+
+datapath <- "Data"
+dataout <- "Dataout"
+tableau <- "Tableau"
+imagepath <- "Images"
+rpath <- "Scripts"
+logos <- "Logos"
+
+# Migrate data to the folders, ignore as needed
