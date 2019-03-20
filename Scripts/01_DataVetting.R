@@ -165,3 +165,4 @@ datalist %>%
   map(., 
       ~ write_csv(datalist[[.]], 
                   file.path(datapath, str_c(., ".csv"))))
+
