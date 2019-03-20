@@ -21,3 +21,11 @@ rpath <- "Scripts"
 logos <- "Logos"
 
 # Migrate data to the folders, ignore as needed
+
+
+# Fix time zone issues
+Sys.setenv(TZ = "America/New_York")
+
+# Source functions needed for scripts
+files <- c("compare_vars.R", "strip_geom.R", "fltr_func.R", "group_check.R")
+map(files, ~source(file.path(rpath, .)))
