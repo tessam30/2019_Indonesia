@@ -144,3 +144,24 @@ invest_long %>%
   ) %>% 
   arrange(desc(diff)) %>% 
   knitr::kable() 
+
+
+
+# Levels of granularity for datasets
+
+IND_investments_dist <- fltr_func(invest_long, Granularity == "District") 
+IND_investments_prov <- fltr_func(invest_long, Granularity == "Provincial")
+IND_investments_natl <- fltr_func(invest_long, Granularity == "Nationwide")
+
+
+datalist = list(IND_investments_dist = IND_investments_dist, 
+                IND_investments_prov = IND_investments_prov,
+                IND_investments_natl = IND_investments_natl, 
+                IND_investments_all = invest_long)
+
+# write the files to the data folder using the list names 
+datalist %>%  
+  names() %>% 
+  map(., 
+      ~ write_csv(datalist[[.]], 
+                  file.path(datapath, str_c(., ".csv"))))
