@@ -120,6 +120,7 @@ invest_long <-
   # Create a TEC variable to check the math from Excel
   mutate(total_amt = sum(amount, na.rm = "TRUE")) %>% 
   ungroup() %>% 
+  mutate(check_totals = TEC - total_amt) %>% 
   
   # Create a tolerance range that marks if the new TEC is different from the old
   mutate(TEC_diff = ifelse(near(TEC, total_amt, tol = 2), 1, 0)) %>% 
@@ -130,7 +131,10 @@ invest_long <-
          national = ifelse(Granularity == "Nationwide", 1, 0)) %>% 
   
   select(IM, amount, TEC, total_amt, TEC_diff, everything()) %>% 
-  arrange(IM, Fiscal_year) 
+  arrange(IM, Fiscal_year) %>% 
+  select(IM, AwardNumber, Office, Sector, TEC, total_amt, check_totals, 
+         amount, Province, District, Region, 
+         KABKOT_ID, PROV_ID, Granularity, everything()) 
 
 
 invest_long %>% 
