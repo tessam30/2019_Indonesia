@@ -132,7 +132,7 @@ invest_long <-
   
   select(IM, amount, TEC, total_amt, TEC_diff, everything()) %>% 
   arrange(IM, Fiscal_year) %>% 
-  select(IM, AwardNumber, Office, Sector, TEC, total_amt, check_totals, 
+  select(IM, Office, Sector, TEC, total_amt, check_totals, 
          amount, Province, District, Region, 
          KABKOT_ID, PROV_ID, Granularity, everything()) 
 
@@ -167,6 +167,9 @@ datalist = list(IND_investments_dist = IND_investments_dist,
 datalist %>%  
   names() %>% 
   map(., 
-      ~ write_csv(datalist[[.]], 
+      ~ ex(datalist[[.]], 
                   file.path(datapath, str_c(., ".csv"))))
+
+# Make a markdown table
+invest_long %>% group_by(Province, District) %>% summarise(sum = sum(amount, na.rm = TRUE)) %>% arrange(Province, desc(sum), District) %>% print(n=Inf) %>% knitr::kable(format.args = list(big.mark = ","), digits = 0)
 
