@@ -173,3 +173,4 @@ datalist %>%
 # Make a markdown table
 invest_long %>% group_by(Province, District) %>% summarise(sum = sum(amount, na.rm = TRUE)) %>% arrange(Province, desc(sum), District) %>% print(n=Inf) %>% knitr::kable(format.args = list(big.mark = ","), digits = 0)
 
+
