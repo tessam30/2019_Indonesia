@@ -9,6 +9,7 @@
 # What have you loaded?
 (.packages())
 sessionInfo()
+options(stringsAsFactors = FALSE)
 
 # Load the data provided
 dir(datapath)
@@ -17,8 +18,8 @@ geo2 <- st_read(file.path(admin2, "BPS_Admin2Boundary_2013.shp"))
 geo1 <- st_read(file.path(admin1, "BPS_Admin1Boundary_2013.shp"))
 
 # What do we all have in the data provided to us? Let's make it into a listed dataframe
-excel_sheets(file.path(datapath, "USAID Indonesia Investment Mapping.xlsx"))
-investpath <- file.path(datapath, "USAID Indonesia Investment Mapping.xlsx")
+excel_sheets(file.path(datapath, "USAID Indonesia Investment Mapping_2019412.xlsx"))
+investpath <- file.path(datapath, "USAID Indonesia Investment Mapping_2019412.xlsx")
 
 ind_invest <-
   investpath %>%
@@ -63,7 +64,7 @@ dist <-
 # Create a crosswalk with the Kabkot codes, name, and province; Remove the geometry
 # 502 Unique District
 admin2_cw <- strip_geom(geo2, OBJECTID, KABKOT, KABKOT_ID, PROVINSI)
-admin1_cw <- strip_geom(geo1, OBJECTID, PROVINSI, Region)
+admin1_cw <- strip_geom(geo1, OBJECTID, PROVINSI, Region, prop_code)
 
 
 # Compare Province and District Names / Numbers ---------------------------
@@ -85,24 +86,74 @@ prov_df <-
 compare_vars(prov_df$Province, prov_sf$PROVINSI)
 compare_vars(dist$KABKOT_ID, admin2_cw$KABKOT_ID)
 
+tmp <- full_join(dist, admin2_cw, by = c("KABKOT_ID"))
 
 # How many Districts merge to the Admin2 shapefile data?
 dist_join <-
   dist %>%
   left_join(x = ., y = admin2_cw, by = c("KABKOT_ID"))
 
+# Use below to get the case_when statements you need to clean up investment data
+tmp <- admin2_cw %>% 
+  left_join(dist, by = c("KABKOT" = "District")) %>% 
+  mutate(id_check = ifelse(KABKOT_ID.x == KABKOT_ID.y, 0, 1)) %>% 
+  arrange(desc(id_check)) %>% 
+  select(contains("KABKOT"), everything())
 
+
+# What happens if we join to the District level shapefile?
+geo2_invest <- 
+  geo2 %>% 
+  left_join(x = ., y = invest_long, by = c("KABKOT_ID"))
+
+st_write(geo2_invest, file.path("Data", "IND_admin2_investments.shp"), delete_dsn=TRUE)
 
 
 # Investigate and reshape loaded data  ------------------------------------
 # Dates have been resolved by the Mission -- even POSIXct
+# Found a problem w/ the PROV ID and KABKOT IDs not matching, even PROV IDs being wrong
+# Need to join the investment data to the province shapefile info and double check PROV IDS
+# Then, repeat the process w/ the first two digits from the KABKOT IDs to see
+# what districts got messed up?
+
+invest_prov <- 
+  invest %>% 
+  left_join(., admin1_cw, by = c("Province" = "PROVINSI")) %>% 
+  mutate(prov_id_flag = ifelse(prop_code == PROV_ID, 0, 1),) %>% 
+  mutate(prov_ID_fixed = ifelse(prov_id_flag == 1, prop_code, PROV_ID)) %>% # Fix the problemmatic Provinces and create a new variable
+  select(prov_id_flag, Province, prov_ID_fixed, PROV_ID, prop_code, Region.y, Region.x, everything()) %>% 
+  arrange(desc(prov_id_flag)) %>% 
+  
+  # Next step is to interrogate the district data using the first 
+  # two digits from the KABKOT_ID to see if they align to the PROV_ID_FIXED
+  mutate(District = case_when(
+    District == "KOTA GORONTALO"
+  ))
+
+
+%>% 
+  mutate(kabkot_id_check = substr(KABKOT_ID, 1, 2) %>% as.numeric(), 
+         prov_dist_flag = ifelse(kabkot_id_check == prov_ID_fixed, 0, 1)) %>% 
+  select(District, KABKOT_ID, kabkot_id_check, prov_dist_flag, everything()) %>% 
+  arrange(desc(prov_dist_flag))
+
+
+
+
+
+
+
+
+
 # Reshape the data based on Fiscal year dates
 invest_long <- 
   invest %>% 
   gather(starts_with("FY"), 
          key = Fiscal_year, 
          value = "amount") %>% 
-  filter(amount != 0) # filter out all rows that contain no information
+  filter(amount != 0) %>% # filter out all rows that contain no information 
+  mutate(prov_first2 = substr(KABKOT_ID, 1, 2) %>% as.numeric,
+         prov_flag = ifelse(prov_first2 == PROV_ID, 0, 1))
 
   
 # Mission asked for 3 data sets, Nation-wide, Provincal and District
@@ -147,7 +198,10 @@ invest_long %>%
     diff = TEC - FY_amount
   ) %>% 
   arrange(desc(diff)) %>% 
-  knitr::kable() 
+  #knitr::kable() %>% 
+  mutate(IM = fct_reorder(IM, diff)) %>% 
+  ggplot(aes(x = IM, y = diff)) + geom_col() +
+  coord_flip()
 
 
 
