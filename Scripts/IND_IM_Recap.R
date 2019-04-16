@@ -52,7 +52,26 @@ pf_long %>%
 
 # Proof of conept plot 
 pf_long %>% 
-  filter(Type == "Successes") %>% 
+  #filter(Type == "Successes") %>% 
   ggplot(aes(x = Results, y = (value)/IM_count)) + geom_col() +
-  coord_flip() +
-  facet_wrap(~ Province)
+  coord_flip() + theme_minimal() +
+  facet_wrap(Province ~ Type)
+
+# Proof of conept plot 
+pf_long %>% 
+  mutate(sortvar = fct_reorder(Province, IM_count, .desc = TRUE)) %>% 
+  #filter(Type == "Successes") %>% 
+  ggplot(aes(x = Results, y = value)) + geom_col() +
+  coord_flip() + theme_minimal() +
+  facet_wrap(sortvar ~ Type)
+
+# Create two extracts, one with Success and Challenges spread, 
+# other with them stacked
+
+pf_long %>% 
+  group_by(Type, Office, IM, Province, group) %>% 
+  summarise(value = mean(value)) %>% 
+  spread(Province, value)
+
+write_csv(pf_long, file.path(datapath, "IM_Recap_long.csv"))
+

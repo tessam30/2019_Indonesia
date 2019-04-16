@@ -118,42 +118,61 @@ st_write(geo2_invest, file.path("Data", "IND_admin2_investments.shp"), delete_ds
 
 invest_prov <- 
   invest %>% 
+  mutate(Province = ifelse(Province == "DAERAH ISTIMEWA KOTA YOGYAKARTA", "DAERAH ISTIMEWA YOGYAKARTA", Province),
+         Province = case_when(
+           District == "BULUNGAN" ~ "KALIMANTAN UTARA",
+           District == "KOTA BALIKPAPAN" ~ "KALIMANTAN TIMUR",
+           District == "KOTA BANJAR BARU" ~"KALIMANTAN SELATAN",
+           District == "KOTA TARAKAN" ~ "KALIMANTAN UTARA",
+           District == "SUMBAWA" ~ "NUSA TENGGARA BARAT",
+           District == "TANA TIDUNG" ~ "KALIMANTAN UTARA",
+           District == "TEBING TINGGI" ~ "SUMATERA UTARA",
+           TRUE ~ as.character(Province)
+         )) %>% 
   left_join(., admin1_cw, by = c("Province" = "PROVINSI")) %>% 
-  mutate(prov_id_flag = ifelse(prop_code == PROV_ID, 0, 1),) %>% 
+  mutate(prov_id_flag = ifelse(prop_code == PROV_ID, 0, 1)) %>% 
+  select(District, KABKOT_ID, everything()) %>% 
   mutate(prov_ID_fixed = ifelse(prov_id_flag == 1, prop_code, PROV_ID)) %>% # Fix the problemmatic Provinces and create a new variable
-  select(prov_id_flag, Province, prov_ID_fixed, PROV_ID, prop_code, Region.y, Region.x, everything()) %>% 
-  arrange(desc(prov_id_flag)) %>% 
+  select(prov_id_flag, Province, prov_ID_fixed, PROV_ID, prop_code, Region.y, Region.x, everything())%>% 
+  arrange(desc(prov_id_flag))%>% 
   
   # Next step is to interrogate the district data using the first 
   # two digits from the KABKOT_ID to see if they align to the PROV_ID_FIXED
-  mutate(District = case_when(
-    District == "KOTA GORONTALO"
-  ))
+  mutate(KABKOT_ID = case_when(
+    District == "KOTA GORONTALO" ~ 7571,
+    District == "BURU"           ~ 8104,
+    District == "BURU SELATAN"   ~ 8109,
+    District == "JAYAPURA"       ~ 9403,
+    District == "KOTA JAYAPURA"  ~ 9471,
+    District == "KOTA MATARAM"   ~ 5271,
+    District == "KOTA BANDUNG"   ~ 3273,
+    TRUE ~ as.numeric(KABKOT_ID)
+  ),
+ prov_ID_fixed = ifelse(KABKOT_ID == 7571, 75, prov_ID_fixed),
+ Province = case_when(
+   KABKOT_ID == 7571 ~ "GORONTALO",
+   TRUE ~ as.character(Province)
+ ),
+  kabkot_id_check = substr(KABKOT_ID, 1, 2) %>%  as.numeric(),
+  prov_dist_flag = ifelse(kabkot_id_check == prov_ID_fixed, 0, 1)) %>% 
+  arrange(desc(prov_dist_flag), District) %>% 
+  select(District, KABKOT_ID, prov_ID_fixed, kabkot_id_check, prov_dist_flag, everything()) %>% 
+  arrange(desc(prov_dist_flag)) %>% 
+  select(-contains("Region"), -'..13', -'..34') %>% 
+  select(Province, prov_ID_fixed, District, KABKOT_ID, prov_dist_flag, prov_id_flag, everything())
 
-
-%>% 
-  mutate(kabkot_id_check = substr(KABKOT_ID, 1, 2) %>% as.numeric(), 
-         prov_dist_flag = ifelse(kabkot_id_check == prov_ID_fixed, 0, 1)) %>% 
-  select(District, KABKOT_ID, kabkot_id_check, prov_dist_flag, everything()) %>% 
-  arrange(desc(prov_dist_flag))
-
-
-
-
-
-
+write_csv(invest_prov, file.path(datapath, "IND_Invest_2019_04_16.csv"))
 
 
 
 # Reshape the data based on Fiscal year dates
 invest_long <- 
-  invest %>% 
+  invest_prov %>% 
   gather(starts_with("FY"), 
          key = Fiscal_year, 
          value = "amount") %>% 
-  filter(amount != 0) %>% # filter out all rows that contain no information 
-  mutate(prov_first2 = substr(KABKOT_ID, 1, 2) %>% as.numeric,
-         prov_flag = ifelse(prov_first2 == PROV_ID, 0, 1))
+  filter(amount != 0) # filter out all rows that contain no information 
+
 
   
 # Mission asked for 3 data sets, Nation-wide, Provincal and District
