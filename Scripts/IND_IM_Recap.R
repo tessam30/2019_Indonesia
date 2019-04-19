@@ -73,5 +73,12 @@ pf_long %>%
   summarise(value = mean(value)) %>% 
   spread(Province, value)
 
+pf_long %>% 
+  select(-result_total, -percent) %>% 
+  group_by(Office, IM, Province, Results, group, IM_count, Type) %>% 
+  summarise(count = sum(value)) %>% 
+  arrange(Province) %>% 
+  print(n = Inf)
+
 write_csv(pf_long, file.path(datapath, "IM_Recap_long.csv"))
 
